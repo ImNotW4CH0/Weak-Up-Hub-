@@ -1,0 +1,525 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+
+local Window = OrionLib:MakeWindow({Name = "Weak Up", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest"})
+
+local BoxMinutes = 15
+local WeedMinutes = 15
+
+local Tab1 = Window:MakeTab({
+	Name = "Player",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+local Tab2 = Window:MakeTab({
+	Name = "Autofarm",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+local Section3 = Tab2:AddSection({
+	Name = "Box Autofarm"
+})
+
+local Section4 = Tab2:AddSection({
+	Name = "Weed Autofarm"
+})
+
+
+local Section1 = Tab1:AddSection({
+	Name = "LocalPlayer"
+})
+
+local Section2 = Tab1:AddSection({
+	Name = "Weapons"
+})
+
+local weedFarming = false
+local weedMinutes = 15
+
+Section4:AddButton({
+    Name = "Start",
+    Callback = function()
+        if not weedFarming then
+            weedFarming = true
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+            local runTime = weedMinutes * 60
+            local startTime = tick()
+            
+            local function getHarvestedCount()
+                local text = player.PlayerGui.Harvested.TextLabel.Text
+                local numberHarvested = tonumber(string.match(text, "(%d+) Harvested"))
+                return numberHarvested or 0
+            end
+
+            local function equipLeafs()
+                local backpack = player:WaitForChild("Backpack")
+                if backpack then
+                    local leafItems = backpack:GetChildren()
+                    for _, item in ipairs(leafItems) do
+                        if item.Name == "Leafs" then
+                            item.Parent = player.Character
+                            local zanpcUpperTorso = workspace.ZANPC.UpperTorso
+                            task.wait(1.5)
+                            fireproximityprompt(zanpcUpperTorso.Interact)
+                            task.wait(1)
+                        end
+                    end
+                end
+                task.wait(3)
+            end
+
+            local function startFarming()
+                -- Harvesting plants
+                while weedFarming and (tick() - startTime) < runTime do
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                    
+                    for _, plant in pairs(workspace.Plants:GetChildren()) do
+                        if not weedFarming then break end
+                        if plant.Name == "Plant" and plant:FindFirstChild("Leaf") then
+                            local leafCFrame = plant.Leaf.CFrame
+                            local newPosition = leafCFrame.Position + Vector3.new(0, 3, 0)
+                            humanoidRootPart.CFrame = CFrame.new(newPosition, leafCFrame.Position)
+                            fireproximityprompt(plant.Leaf.Interact)
+                        end
+                    end
+                    
+                    if getHarvestedCount() >= 20 then
+                        break
+                    end
+                    
+                    task.wait(1.5)
+                end
+            end
+
+            local function mainLoop()
+                while weedFarming and (tick() - startTime) < runTime do
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                    
+                    local harvestedCount = getHarvestedCount()
+
+                    if harvestedCount < 10 then
+                        local zanpcUpperTorso = workspace.ZANPC.UpperTorso
+                        local zanpcPosition = zanpcUpperTorso.Position + Vector3.new(0, 3, 0)
+                        humanoidRootPart.CFrame = CFrame.new(zanpcPosition)
+                        task.wait(0.5)
+                        equipLeafs()
+                    else
+                        while harvestedCount >= 10 do
+                            if not weedFarming then break end
+                            local processModel = workspace:WaitForChild("Process")
+                            local processPart = processModel:GetChildren()[3].Part
+                            local processPosition = processPart.Position + Vector3.new(0, 3, 0)
+                            
+                            humanoidRootPart.CFrame = CFrame.new(processPosition)
+                            task.wait(0.5)
+                            fireproximityprompt(processPart.Interact)
+                            
+                            task.wait(5)
+                            
+                            harvestedCount = getHarvestedCount()
+                        end
+                    end
+
+                    task.wait(1)
+                end
+            end
+
+            coroutine.wrap(function()
+                while weedFarming do
+                    startTime = tick()
+                    startFarming()
+                    mainLoop()
+                end
+                weedFarming = false
+            end)()
+
+            player.CharacterAdded:Connect(function()
+                if weedFarming then
+                    startTime = tick()
+                    startFarming()
+                    mainLoop()
+                end
+            end)
+        end
+    end    
+})
+
+Section4:AddButton({
+    Name = "Stop",
+    Callback = function()
+        weedFarming = false
+    end    
+})
+
+Section4:AddSlider({
+    Name = "Minutes",
+    Min = 1,
+    Max = 360,
+    Default = 15,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 1,
+    ValueName = "Value",
+    Callback = function(Value)
+        weedMinutes = Value
+    end    
+})
+
+local boxFarming = false
+
+Section3:AddButton({
+    Name = "Start",
+    Callback = function()
+        if not boxFarming then
+            boxFarming = true
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+            
+            local runTime = BoxMinutes * 60
+            local startTime = tick()
+            
+            local function startFarming()
+                while tick() - startTime < runTime and boxFarming do
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                    
+                    local boxJobTakePart = workspace:WaitForChild("Map"):WaitForChild("Jobs"):WaitForChild("BoxJob"):WaitForChild("Take")
+                    local takePrompt = boxJobTakePart:FindFirstChildWhichIsA("ProximityPrompt")
+
+                    if boxJobTakePart and takePrompt then
+                        humanoidRootPart.CFrame = boxJobTakePart.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.3)
+                        fireproximityprompt(takePrompt)
+                    end
+
+                    wait(0.4)
+
+                    local boxJobDeliverPart = workspace:WaitForChild("Map"):WaitForChild("Jobs"):WaitForChild("BoxJob"):WaitForChild("Deliver")
+                    local deliverPrompt = boxJobDeliverPart:FindFirstChildWhichIsA("ProximityPrompt")
+
+                    if boxJobDeliverPart and deliverPrompt then
+                        humanoidRootPart.CFrame = boxJobDeliverPart.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.3)
+                        fireproximityprompt(deliverPrompt)
+                    end
+
+                    wait(0.5)
+                end
+            end
+
+            player.CharacterAdded:Connect(function()
+                if boxFarming then
+                    startFarming()
+                end
+            end)
+
+            startFarming()
+        end
+    end    
+})
+
+Section3:AddButton({
+    Name = "Stop",
+    Callback = function()
+        boxFarming = false
+    end    
+})
+
+Section3:AddSlider({
+	Name = "Minutes",
+	Min = 1,
+	Max = 360,
+	Default = 15,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "Value",
+	Callback = function(Value)
+		BoxMinutes = Value
+	end    
+})
+
+
+Section1:AddSlider({
+	Name = "WalkSpeed",
+	Min = 0,
+	Max = 350,
+	Default = 16,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "Value",
+	Callback = function(Value)
+		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+	end    
+})
+
+Section1:AddSlider({
+	Name = "JumpPower",
+	Min = 0,
+	Max = 350,
+	Default = 50,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "Value",
+	Callback = function(Value)
+		game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+	end    
+})
+
+Section1:AddButton({
+	Name = "Force Respawn",
+	Callback = function()
+                local args = {
+                   [1] = "ss"
+                 }
+      		game:GetService("Lighting").bt:FireServer(unpack(args))
+  	end    
+})
+
+local HitboxEnabled = false
+local HeadSize = 20
+
+local function ExpandHitbox()
+    local localPlayer = game:GetService('Players').LocalPlayer
+    if not localPlayer then return end
+
+    local localPlayerTeam = localPlayer.Team
+
+    for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+        if player ~= localPlayer and (not IsTeamCheckEnabled or player.Team ~= localPlayerTeam) then
+            local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                humanoidRootPart.Size = Vector3.new(HeadSize, HeadSize, HeadSize)
+                humanoidRootPart.Transparency = 0.7
+                humanoidRootPart.BrickColor = BrickColor.new("Really blue")
+                humanoidRootPart.Material = Enum.Material.Neon
+                humanoidRootPart.CanCollide = false
+            end
+        end
+    end
+end
+
+local function ContractHitbox()
+    for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+        local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            humanoidRootPart.Size = Vector3.new(2, 2, 1)
+            humanoidRootPart.Transparency = 1
+            humanoidRootPart.BrickColor = BrickColor.new("Bright red")
+            humanoidRootPart.Material = Enum.Material.SmoothPlastic
+            humanoidRootPart.CanCollide = true
+        end
+    end
+end
+
+Section2:AddButton({
+	Name = "Buy 1911",
+	Callback = function()
+               local args = {
+                   [1] = "1911",
+                   [2] = 1000
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Glock 17",
+	Callback = function()
+               local args = {
+                   [1] = "Glock17",
+                   [2] = 1700
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy FN 5.7",
+	Callback = function()
+               local args = {
+                   [1] = "FN 5.7",
+                   [2] = 2500
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Skorpion",
+	Callback = function()
+               local args = {
+                   [1] = "Skorpion",
+                   [2] = 2800
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy FN 5.7",
+	Callback = function()
+               local args = {
+                   [1] = "FN 5.7",
+                   [2] = 2500
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Mac",
+	Callback = function()
+               local args = {
+                   [1] = "Mac",
+                   [2] = 3500
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Vector",
+	Callback = function()
+               local args = {
+                   [1] = "Vector",
+                   [2] = 4000
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Mac",
+	Callback = function()
+               local args = {
+                   [1] = "Mac",
+                   [2] = 3500
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy ARPistol",
+	Callback = function()
+               local args = {
+                   [1] = "ARPistol",
+                   [2] = 5000
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Shotgun",
+	Callback = function()
+               local args = {
+                   [1] = "Shotgun",
+                   [2] = 5000
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy GlockSwitch",
+	Callback = function()
+               local args = {
+                   [1] = "GlockSwitch",
+                   [2] = 5250
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Tec-9",
+	Callback = function()
+               local args = {
+                   [1] = "Tec-9",
+                   [2] = 3750
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Famas",
+	Callback = function()
+               local args = {
+                   [1] = "Famas",
+                   [2] = 6500
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy AK-47",
+	Callback = function()
+               local args = {
+                   [1] = "AK-47",
+                   [2] = 8500
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Pistol Clip",
+	Callback = function()
+               local args = {
+                   [1] = "Pistol Clip",
+                   [2] = 50
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy AR Clip",
+	Callback = function()
+               local args = {
+                   [1] = "AR Clip",
+                   [2] = 100
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+Section2:AddButton({
+	Name = "Buy Shotgun Ammo",
+	Callback = function()
+               local args = {
+                   [1] = "Shotgun Ammo",
+                   [2] = 100
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("GBuy"):FireServer(unpack(args))
+  	end    
+})
+
+
+
+Section2:AddButton({
+    Name = "Hitbox Expander",
+    Callback = function()
+        if HitboxEnabled == false then
+            ExpandHitbox()
+            print('yea')
+            HitboxEnabled = true
+        elseif HitboxEnabled == true then
+            print('aa')
+            HitboxEnabled = false
+           ContractHitbox()
+        end
+    end
+})
+
+OrionLib:MakeNotification({
+	Name = "Welcome to Obfuscated Hub!",
+	Content = "Bought with love from rangerae & ozmen49 💘",
+	Image = "rbxassetid://4483345998",
+	Time = 5
+})
