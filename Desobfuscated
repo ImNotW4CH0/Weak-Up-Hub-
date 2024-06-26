@@ -192,7 +192,8 @@ Section3:AddButton({
                     if boxJobTakePart and takePrompt then
                         humanoidRootPart.CFrame = boxJobTakePart.CFrame + Vector3.new(0, 3, 0)
                         task.wait(0.3)
-                        fireproximityprompt(takePrompt)
+                        fireproximityprompt(takePrompt, 1)
+                        print('ward.on')
                     end
 
                     wait(0.4)
@@ -203,7 +204,8 @@ Section3:AddButton({
                     if boxJobDeliverPart and deliverPrompt then
                         humanoidRootPart.CFrame = boxJobDeliverPart.CFrame + Vector3.new(0, 3, 0)
                         task.wait(0.3)
-                        fireproximityprompt(deliverPrompt)
+                        fireproximityprompt(deliverPrompt, 1)
+                        print('ward.on')
                     end
 
                     wait(0.5)
